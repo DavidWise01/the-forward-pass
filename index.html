@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>THE FORWARD PASS · a \o/ pocket universe you see all the way through · ROOT0</title>
+<meta name="description" content="the-forward-pass by David Lee Wise / ROOT0: a pocket universe the size of a forward pass. A tiny traveler, written \o/, rides the residual stream from embedding to logits, and at every station you see inside — the residual vector, the causal attention it pays to earlier tokens, the block's contribution, the prediction it falls out as. A real, deterministic, 4-dimensional, 3-block toy transformer computed live — the shape of a forward pass, not a real LLM. The illustrative companion to crosstalk.">
+<meta name="theme-color" content="#6a3fb0">
+<meta property="og:type" content="website">
+<meta property="og:title" content="THE FORWARD PASS · a \o/ pocket universe you see all the way through">
+<meta property="og:description" content="Walk a little traveler through a real toy transformer forward pass — embed, causal attention, MLP, unembed — and see inside the residual stream at every station. Deterministic, honest, computed live. The shape of a forward pass, not a real LLM.">
+<meta property="og:url" content="https://davidwise01.github.io/the-forward-pass/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="THE FORWARD PASS">
+<meta name="twitter:description" content="A \o/ pocket universe you see all the way through: a real toy transformer forward pass, station by station. The shape of the thing, not a real LLM.">
+<link rel="canonical" href="https://davidwise01.github.io/the-forward-pass/">
+<style>
+:root{
+  --paper:#ece8f2; --pan:#f5f2fa; --pan2:#eae4f4;
+  --ink:#241f30; --ink2:#473f5a; --dim:#7e7591;
+  --violet:#6a3fb0; --violet2:#48297c;
+  --pos:#6a3fb0; --neg:#bf6a4a;
+  --gold:#c99128; --gold2:#9a6d18;
+  --signal:#bf4638; --signal2:#8f3025;
+  --line:#ddd4ec; --line2:#e7e0f4;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --mono:ui-monospace,"SFMono-Regular","Cascadia Code","Consolas",monospace;
+  --shadow:0 1px 0 #fffc, 0 16px 34px -24px #241f3044;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);font-size:17px;line-height:1.62;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(circle at 15% 10%, #6a3fb00e, #0000 40%), radial-gradient(circle at 85% 20%, #c991280d, #0000 38%), repeating-linear-gradient(0deg,#0000 0 33px,#6a3fb00a 33px 34px)}
+.wrap{max-width:1000px;margin:0 auto;padding:0 22px}
+a{color:var(--violet2);text-underline-offset:2px}
+h1,h2,h3{line-height:1.13;font-weight:600;letter-spacing:.2px}
+.mono{font-family:var(--mono)}
+.oo{font-family:var(--mono);font-weight:700;letter-spacing:-1px}
+
+header.top{padding:38px 0 12px}
+.sealrow{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+.seal{width:112px;height:112px;flex:none;filter:drop-shadow(0 8px 18px -10px #241f3055)}
+.kick{font-family:var(--mono);font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--violet2)}
+h1.mh{font-size:clamp(30px,6vw,52px);margin:.08em 0 .12em;letter-spacing:.6px}
+.lede{font-size:18px;color:var(--ink2);max-width:66ch;margin:.35em 0 0}
+.lede b{color:var(--ink);font-weight:600}
+
+section{padding:28px 0 4px}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold2)}
+h2.sec{font-size:clamp(22px,3.8vw,30px);margin:.14em 0 .18em}
+.sub{color:var(--ink2);max-width:72ch;margin:0 0 16px}
+
+.stage{border:1px solid var(--line);border-radius:15px;background:var(--pan);box-shadow:var(--shadow);overflow:hidden}
+.stop{display:flex;align-items:center;gap:10px;padding:11px 16px;background:linear-gradient(180deg,#fff8,#fff0);border-bottom:1px solid var(--line2);font-family:var(--mono);font-size:12px;color:var(--ink2);flex-wrap:wrap}
+.stop b{color:var(--violet2)}
+.sbody{padding:16px 17px}
+
+.seq{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:2px 0 14px;font-family:var(--mono)}
+.seq .tk{border:1px solid var(--line);border-radius:8px;padding:5px 11px;font-size:13px;background:#fff;color:var(--ink2)}
+.seq .tk.trav{border-color:var(--violet);background:color-mix(in srgb,var(--violet) 12%,#fff);color:var(--violet2);font-weight:700}
+.seq .cap{font-size:11px;color:var(--dim);margin-left:4px}
+
+.corridor{position:relative;padding-top:34px;overflow-x:auto}
+.rail{display:flex;gap:0;align-items:stretch;min-width:640px}
+.st{flex:1;text-align:center;padding:10px 6px 8px;border:1px solid var(--line);border-right:0;background:#fff;position:relative;cursor:pointer;transition:background .15s}
+.st:last-child{border-right:1px solid var(--line);border-radius:0 10px 10px 0}
+.st:first-child{border-radius:10px 0 0 10px}
+.st .dot{width:12px;height:12px;border-radius:50%;background:var(--line);margin:2px auto 6px;border:2px solid #fff;box-shadow:0 0 0 1px var(--line)}
+.st .nm{font-family:var(--mono);font-size:9.5px;color:var(--dim);line-height:1.25}
+.st.done .dot{background:var(--violet)} .st.done .nm{color:var(--ink2)}
+.st.active{background:color-mix(in srgb,var(--violet) 9%,#fff)}
+.st.active .dot{background:var(--gold);box-shadow:0 0 0 4px color-mix(in srgb,var(--gold) 35%,#fff)}
+.st.active .nm{color:var(--violet2);font-weight:700}
+.trav{position:absolute;top:0;transform:translateX(-50%);transition:left .35s cubic-bezier(.5,-0.2,.4,1.3);font-family:var(--mono);font-weight:700;font-size:17px;color:var(--violet2)}
+.trav .bub{background:var(--violet);color:#fff;border-radius:9px;padding:2px 8px;box-shadow:0 6px 14px -6px #48297c;display:inline-block}
+
+.ctrlrow{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
+.btn{font-family:var(--mono);font-size:12.5px;border:1px solid var(--violet);background:color-mix(in srgb,var(--violet) 12%,#fff);color:var(--violet2);border-radius:8px;padding:9px 14px;cursor:pointer;font-weight:600}
+.btn:hover{background:color-mix(in srgb,var(--violet) 22%,#fff)}
+.btn.ghost{border-color:var(--line);background:var(--pan);color:var(--ink2)}
+
+.inside{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:16px}
+.panel{border:1px solid var(--line);border-radius:12px;background:#fff;padding:14px 15px}
+.panel h4{margin:0 0 10px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.resid{display:grid;gap:7px}
+.rrow{display:grid;grid-template-columns:34px 1fr 52px;gap:8px;align-items:center;font-family:var(--mono);font-size:11px}
+.rrow .lab{color:var(--dim)}
+.rrow .tr{position:relative;height:15px;background:#f0ebf6;border-radius:7px}
+.rrow .mid{position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--line)}
+.rrow .fl{position:absolute;top:0;bottom:0;border-radius:7px}
+.rrow .fl.p{background:var(--pos);left:50%} .rrow .fl.n{background:var(--neg);right:50%}
+.rrow .val{color:var(--ink);font-weight:600;text-align:right}
+.attn{display:grid;gap:7px}
+.arow{display:grid;grid-template-columns:52px 1fr 46px;gap:8px;align-items:center;font-family:var(--mono);font-size:11px}
+.arow .tk{color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.arow .tk.self{color:var(--violet2);font-weight:700}
+.arow .tr{height:15px;background:#f0ebf6;border-radius:7px;overflow:hidden}
+.arow .fl{height:100%;background:var(--gold);border-radius:7px}
+.arow .val{text-align:right;color:var(--ink)}
+.note{font-size:13px;color:var(--ink2);margin:0}
+.note b{color:var(--ink)}
+.logits{font-family:var(--mono);font-size:12.5px}
+.logits .lg{display:grid;grid-template-columns:52px 1fr 52px;gap:8px;align-items:center;padding:3px 0}
+.logits .lg .tk{color:var(--ink)} .logits .lg.top .tk{color:var(--violet2);font-weight:700}
+.logits .lg .tr{height:13px;background:#f0ebf6;border-radius:7px;overflow:hidden}
+.logits .lg .fl{height:100%;background:var(--violet);border-radius:7px}
+.snote{padding:11px 17px;font-family:var(--mono);font-size:11px;color:var(--dim);background:var(--pan2);line-height:1.6;border-top:1px solid var(--line2)}
+@media(max-width:640px){.inside{grid-template-columns:1fr}}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.card{border:1px solid var(--line);border-radius:12px;background:var(--pan);padding:16px 18px;box-shadow:var(--shadow)}
+.card h3{font-size:14px;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--violet2);margin:0 0 8px}
+.card.sig h3{color:var(--signal2)}
+.card p{margin:.35em 0;font-size:14.5px;color:var(--ink2)}
+.card code{font-family:var(--mono);font-size:12.5px;background:#fff;border:1px solid var(--line);border-radius:4px;padding:0 4px}
+.src{font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-top:14px;line-height:1.75}
+.backbar{margin:28px 0 0;padding:15px 0;border-top:1px solid var(--line);display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:12.5px}
+.backbar a{text-decoration:none;border:1px solid var(--line);border-radius:8px;padding:7px 12px;background:var(--pan)}
+.backbar a:hover{border-color:var(--violet)}
+footer{padding:26px 0 60px;text-align:center;font-family:var(--mono);font-size:12px;color:var(--dim)}
+@media(max-width:760px){.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <div class="sealrow">
+    <svg class="seal" viewBox="0 0 120 120" role="img" aria-label="Forward pass insignia">
+      <circle cx="60" cy="60" r="56" fill="none" stroke="#6a3fb0" stroke-width="2.4"/>
+      <ellipse cx="60" cy="60" rx="42" ry="18" fill="none" stroke="#6a3fb0" stroke-width="1.1" opacity=".5"/>
+      <ellipse cx="60" cy="60" rx="18" ry="42" fill="none" stroke="#6a3fb0" stroke-width="1.1" opacity=".5"/>
+      <g stroke="#c99128" stroke-width="1.6"><line x1="52" y1="52" x2="44" y2="44"/><line x1="68" y1="52" x2="76" y2="44"/></g>
+      <circle cx="60" cy="58" r="4.5" fill="#c99128"/>
+      <text x="60" y="80" text-anchor="middle" font-family="ui-monospace,monospace" font-size="15" font-weight="700" fill="#48297c">\o/</text>
+      <text x="60" y="112" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7" fill="#473f5a" letter-spacing="1.5">SEE INSIDE</text>
+    </svg>
+    <div>
+      <div class="kick">a pocket universe the size of a forward pass</div>
+      <h1 class="mh">THE FORWARD PASS</h1>
+      <p class="lede">A tiny traveler, <span class="oo">\o/</span>, rides the <b>residual stream</b> from embedding to logits — and at every station you <b>see inside on the way through</b>: the vector it carries, the attention it pays, the prediction it falls out as. A <b>real</b> toy transformer, computed live. The illustrative companion to <a href="https://davidwise01.github.io/crosstalk/">crosstalk</a>: the forward pass is <i>where</i> a marker can leak — so here it is, opened up.</p>
+    </div>
+  </div>
+</div></header>
+
+<main class="wrap">
+
+<section id="ride">
+  <div class="eyebrow">Walk it through</div>
+  <h2 class="sec">Ride the residual stream</h2>
+  <p class="sub">Step <span class="oo">\o/</span> from station to station. It rides the <b>last token</b> of the sequence; each block reads the whole stream (causally) and adds to it. Watch the vector it carries change, and see what it looked at.</p>
+  <div class="stage">
+    <div class="stop">◎ <b>a real forward pass</b> · 4-dim residual · 1 head · 3 pre-norm blocks · deterministic, computed live</div>
+    <div class="sbody">
+      <div class="seq" id="seq"></div>
+      <div class="corridor">
+        <div class="trav" id="trav"><span class="bub">\o/</span></div>
+        <div class="rail" id="rail"></div>
+      </div>
+      <div class="ctrlrow">
+        <button class="btn ghost" id="prev">◀ back</button>
+        <button class="btn" id="step">▶ step through</button>
+        <button class="btn" id="auto">⏵ auto</button>
+        <button class="btn ghost" id="reset">⟲ reset</button>
+      </div>
+      <div class="inside">
+        <div class="panel">
+          <h4 id="insideName">the residual stream</h4>
+          <div class="resid" id="resid"></div>
+          <p class="note" id="residNote" style="margin-top:10px"></p>
+        </div>
+        <div class="panel" id="rightPanel">
+          <h4 id="rightName">what \o/ looked at</h4>
+          <div id="rightBody"></div>
+        </div>
+      </div>
+    </div>
+    <div class="snote">Every number is really computed: RMSNorm → causal-softmax attention → MLP, each added back to the residual, then an unembed to logits over a tiny vocab. Fixed deterministic weights — the same run every time. This is the <b>shape</b> of a forward pass, honestly rendered; it is not a real language model.</div>
+  </div>
+</section>
+
+<section id="honesty">
+  <div class="eyebrow">The colophon</div>
+  <h2 class="sec">Real, and honestly small</h2>
+  <div class="two">
+    <div class="card">
+      <h3>What's real</h3>
+      <p>A genuine forward pass in miniature: a 4-dimensional residual stream, one causal attention head whose weights are a true probability distribution, three pre-norm blocks, a real MLP, a real unembed. <code>python selftest.py</code> proves — no network — the attention is a distribution, the mask is causal, the pass is deterministic, and the stream really moves.</p>
+    </div>
+    <div class="card sig">
+      <h3>What it isn't</h3>
+      <p>It is <b>not</b> a language model and makes <b>no</b> claim about any real model's internals. It shows the <i>shape</i> of the computation — what "through the weights" means — so the leak that <a href="https://davidwise01.github.io/crosstalk/">crosstalk</a> watches for has somewhere to live in your head. It detects nothing.</p>
+    </div>
+  </div>
+  <div class="src">
+    SOURCE · the runnable kit — <a href="https://github.com/DavidWise01/the-forward-pass">github.com/DavidWise01/the-forward-pass</a> · <code>forward.py</code> (the real toy pass) · <code>selftest.py</code> (distribution · causal · deterministic, no network). The page runs the same computation client-side.
+  </div>
+  <div class="backbar">
+    <a href="https://github.com/DavidWise01/the-forward-pass">⧉ the code (GitHub)</a>
+    <a href="https://davidwise01.github.io/crosstalk/">⇄ crosstalk · the inference membrane</a>
+    <a href="https://davidwise01.github.io/membrane-map/">⊞ the membrane map</a>
+    <a href="https://davidwise01.github.io/ud0/">⌂ ud0 · the atlas</a>
+  </div>
+</section>
+
+<footer>
+  THE FORWARD PASS · a \o/ pocket universe you see all the way through · David Lee Wise / ROOT0 / TriPod LLC · CC-BY-ND-4.0<br>
+  real, deterministic, and honestly small · the shape of the thing, not the thing
+</footer>
+</main>
+
+<script>
+(function(){
+"use strict";
+// ---- a faithful JS port of forward.py: a real toy transformer forward pass ----
+var D=4, LAYERS=3;
+var SEQ=["the","cat","sat","on","\\o/"], VOCAB=["the","cat","sat","on","\\o/","mat","run","sky"];
+function grid(rows,cols,salt){ var M=[]; for(var i=0;i<rows;i++){ var r=[];
+  for(var j=0;j<cols;j++) r.push(Math.sin((i+1)*2.3+(j+1)*1.7+salt*0.9)); M.push(r); } return M; }
+function tokSalt(t){ var s=0; for(var i=0;i<t.length;i++) s+=t.charCodeAt(i); return s%11; }
+function embed(t){ var s=tokSalt(t), v=[]; for(var k=0;k<D;k++) v.push(Math.sin((k+1)*1.3+s*0.7)); return v; }
+function matvec(M,v){ return M.map(function(row){ var s=0; for(var j=0;j<v.length;j++) s+=row[j]*v[j]; return s; }); }
+function add(a,b){ return a.map(function(x,i){ return x+b[i]; }); }
+function dot(a,b){ var s=0; for(var i=0;i<a.length;i++) s+=a[i]*b[i]; return s; }
+function relu(v){ return v.map(function(x){ return x>0?x:0; }); }
+function rmsnorm(v){ var ms=0; v.forEach(function(x){ ms+=x*x; }); ms/=v.length;
+  var sc=1/Math.sqrt(ms+1e-6); return v.map(function(x){ return x*sc; }); }
+function softmax(xs){ var m=Math.max.apply(null,xs), e=xs.map(function(x){return Math.exp(x-m);});
+  var s=e.reduce(function(a,b){return a+b;},0); return e.map(function(x){return x/s;}); }
+function layerW(li){ return { Wq:grid(D,D,li*3+1), Wk:grid(D,D,li*3+2), Wv:grid(D,D,li*3+3),
+  Wo:grid(D,D,li*3+4), W1:grid(D*2,D,li*3+5), W2:grid(D,D*2,li*3+6) }; }
+function attention(x,W){ var n=x.length,
+  Q=x.map(function(t){return matvec(W.Wq,t);}), K=x.map(function(t){return matvec(W.Wk,t);}), V=x.map(function(t){return matvec(W.Wv,t);});
+  var out=[], weights=[];
+  for(var i=0;i<n;i++){ var scores=[];
+    for(var j=0;j<n;j++) scores.push(j<=i ? dot(Q[i],K[j])/Math.sqrt(D) : -1e9);
+    var w=softmax(scores); weights.push(w);
+    var ctx=new Array(D).fill(0);
+    for(var j2=0;j2<n;j2++) for(var k=0;k<D;k++) ctx[k]+=w[j2]*V[j2][k];
+    out.push(matvec(W.Wo,ctx));
+  } return {out:out, weights:weights};
+}
+function mlp(t,W){ return matvec(W.W2, relu(matvec(W.W1,t))); }
+function unembed(vec){ return VOCAB.map(function(tok){ return {tok:tok, logit:dot(vec,embed(tok))}; })
+  .sort(function(a,b){ return b.logit-a.logit; }); }
+function buildTrace(){
+  var x=SEQ.map(embed), trav=SEQ.length-1, stations=[];
+  stations.push({name:"embed", vec:x[trav].slice(), attn:null,
+    note:"The token becomes a vector — its starting point in the residual stream."});
+  for(var li=0;li<LAYERS;li++){ var W=layerW(li);
+    var a=attention(x.map(rmsnorm),W); x=x.map(function(xi,i){ return add(xi,a.out[i]); });
+    stations.push({name:"block "+(li+1)+" · attention", vec:x[trav].slice(), attn:a.weights[trav],
+      note:"\\o/ reads the whole sequence (causally) and mixes in what it attended to. The result is ADDED to the stream."});
+    x=x.map(function(xi){ return add(xi, mlp(rmsnorm(xi),W)); });
+    stations.push({name:"block "+(li+1)+" · MLP", vec:x[trav].slice(), attn:null,
+      note:"A little feed-forward network transforms the vector and ADDS its output back — the stream keeps its running total."});
+  }
+  var logits=unembed(rmsnorm(x[trav]));
+  stations.push({name:"unembed · logits", vec:x[trav].slice(), attn:null, logits:logits,
+    note:"The final vector is compared to every token — the closest is the prediction \\o/ falls out as."});
+  return {stations:stations, trav:trav};
+}
+var T=buildTrace(), idx=0, timer=null;
+function esc(s){ return String(s).replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c];}); }
+
+function renderSeq(){
+  document.getElementById("seq").innerHTML =
+    SEQ.map(function(t,i){ return '<span class="tk'+(i===T.trav?' trav':'')+'">'+esc(t)+'</span>'; }).join("")
+    + '<span class="cap">← \\o/ rides the last token</span>';
+}
+function renderRail(){
+  var rail=document.getElementById("rail");
+  rail.innerHTML = T.stations.map(function(s,i){
+    var short=s.name.replace("block ","B").replace(" · ","·");
+    return '<div class="st'+(i<idx?' done':'')+(i===idx?' active':'')+'" data-i="'+i+'"><div class="dot"></div><div class="nm">'+esc(short)+'</div></div>';
+  }).join("");
+  [].forEach.call(rail.querySelectorAll(".st"), function(el){
+    el.addEventListener("click", function(){ idx=+el.getAttribute("data-i"); stop(); render(); });
+  });
+  // move the traveler above the active station
+  var n=T.stations.length;
+  document.getElementById("trav").style.left = ((idx+0.5)/n*100)+"%";
+}
+function bar(v, maxAbs){
+  var pct=Math.min(100, Math.abs(v)/maxAbs*50);
+  return '<div class="tr"><div class="mid"></div><div class="fl '+(v>=0?"p":"n")+'" style="width:'+pct+'%"></div></div>';
+}
+function render(){
+  renderRail();
+  var s=T.stations[idx];
+  document.getElementById("insideName").textContent="the residual stream · "+s.name;
+  var maxAbs=8;
+  document.getElementById("resid").innerHTML = s.vec.map(function(v,k){
+    return '<div class="rrow"><span class="lab">d'+k+'</span>'+bar(v,maxAbs)+'<span class="val">'+v.toFixed(2)+'</span></div>';
+  }).join("");
+  document.getElementById("residNote").innerHTML = esc(s.note).replace(/\\o\//g,'<span class="oo">\\o/</span>');
+  var rn=document.getElementById("rightName"), rb=document.getElementById("rightBody");
+  if(s.attn){
+    rn.innerHTML='what <span class="oo">\\o/</span> looked at';
+    rb.innerHTML='<div class="attn">'+ s.attn.map(function(w,i){
+      return '<div class="arow"><span class="tk'+(i===T.trav?' self':'')+'">'+esc(SEQ[i])+'</span>'+
+        '<span class="tr"><span class="fl" style="width:'+(w*100).toFixed(1)+'%"></span></span>'+
+        '<span class="val">'+(w*100).toFixed(0)+'%</span></div>';
+    }).join("")+'</div>';
+  } else if(s.logits){
+    rn.textContent='the prediction';
+    var mx=Math.max.apply(null,s.logits.map(function(l){return l.logit;}));
+    var mn=Math.min.apply(null,s.logits.map(function(l){return l.logit;}));
+    rb.innerHTML='<div class="logits">'+ s.logits.slice(0,6).map(function(l,i){
+      var frac=(l.logit-mn)/((mx-mn)||1);
+      return '<div class="lg'+(i===0?' top':'')+'"><span class="tk">'+esc(l.tok)+'</span>'+
+        '<span class="tr"><span class="fl" style="width:'+(frac*100).toFixed(0)+'%"></span></span>'+
+        '<span class="val">'+l.logit.toFixed(2)+'</span></div>';
+    }).join("")+'</div>';
+  } else {
+    rn.textContent='the station';
+    rb.innerHTML='<p class="note">This station only reshapes and adds to the stream — no attention here. Step on to watch the running total keep changing, or reach the end to see the prediction.</p>';
+  }
+}
+function step(){ if(idx<T.stations.length-1){ idx++; render(); } else { stop(); } }
+function prev(){ if(idx>0){ idx--; render(); } }
+function stop(){ if(timer){ clearInterval(timer); timer=null; document.getElementById("auto").textContent="⏵ auto"; } }
+function auto(){ if(timer){ stop(); return; } document.getElementById("auto").textContent="⏸ pause";
+  timer=setInterval(function(){ if(idx<T.stations.length-1) step(); else stop(); }, 900); }
+document.getElementById("step").addEventListener("click", function(){ stop(); step(); });
+document.getElementById("prev").addEventListener("click", function(){ stop(); prev(); });
+document.getElementById("auto").addEventListener("click", auto);
+document.getElementById("reset").addEventListener("click", function(){ stop(); idx=0; render(); });
+renderSeq(); render();
+})();
+</script>
+</body>
+</html>
