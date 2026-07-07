@@ -60,8 +60,14 @@ h2.sec{font-size:clamp(22px,3.8vw,30px);margin:.14em 0 .18em}
 .seq .tk.trav{border-color:var(--violet);background:color-mix(in srgb,var(--violet) 12%,#fff);color:var(--violet2);font-weight:700}
 .seq .cap{font-size:11px;color:var(--dim);margin-left:4px}
 
-.corridor{position:relative;padding-top:34px;overflow-x:auto}
-.rail{display:flex;gap:0;align-items:stretch;min-width:640px}
+.corridor{position:relative;padding-top:34px;padding-bottom:26px;overflow-x:auto;overflow-y:visible}
+.rail{display:flex;gap:0;align-items:stretch;min-width:640px;position:relative;z-index:1}
+/* a second traveler drifts BEHIND the transformer: () above the \ */
+.ghost{position:absolute;left:-7%;bottom:9px;z-index:0;font-family:var(--mono);font-size:13px;line-height:.9;color:var(--violet);opacity:.36;white-space:pre;text-align:center;pointer-events:none;animation:drift 16s linear infinite}
+.ghost b{display:inline-block;font-weight:400;animation:ghostbob 1.7s ease-in-out infinite}
+@keyframes drift{0%{left:-7%}100%{left:105%}}
+@keyframes ghostbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@media(prefers-reduced-motion:reduce){.ghost{animation:none;left:44%}.ghost b{animation:none}}
 .st{flex:1;text-align:center;padding:10px 6px 8px;border:1px solid var(--line);border-right:0;background:#fff;position:relative;cursor:pointer;transition:background .15s}
 .st:last-child{border-right:1px solid var(--line);border-radius:0 10px 10px 0}
 .st:first-child{border-radius:10px 0 0 10px}
@@ -153,6 +159,7 @@ footer{padding:26px 0 60px;text-align:center;font-family:var(--mono);font-size:1
     <div class="sbody">
       <div class="seq" id="seq"></div>
       <div class="corridor">
+        <div class="ghost" aria-hidden="true"><b>()<br>&nbsp;\</b></div>
         <div class="trav" id="trav"><span class="bub">\o/</span></div>
         <div class="rail" id="rail"></div>
       </div>
@@ -174,7 +181,7 @@ footer{padding:26px 0 60px;text-align:center;font-family:var(--mono);font-size:1
         </div>
       </div>
     </div>
-    <div class="snote">Every number is really computed: RMSNorm → causal-softmax attention → MLP, each added back to the residual, then an unembed to logits over a tiny vocab. Fixed deterministic weights — the same run every time. This is the <b>shape</b> of a forward pass, honestly rendered; it is not a real language model.</div>
+    <div class="snote">Every number is really computed: RMSNorm → causal-softmax attention → MLP, each added back to the residual, then an unembed to logits over a tiny vocab. Fixed deterministic weights — the same run every time. This is the <b>shape</b> of a forward pass, honestly rendered; it is not a real language model. (And if you watch a moment: a second little traveler, <span class="oo">()\</span>, drifts along <i>behind</i> the machine — head over the stations, tail below — while <span class="oo">\o/</span> rides through it.)</div>
   </div>
 </section>
 
