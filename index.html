@@ -214,10 +214,11 @@ footer{padding:26px 0 60px;text-align:center;font-family:var(--mono);font-size:1
 // ---- a faithful JS port of forward.py: a real toy transformer forward pass ----
 var D=4, LAYERS=3;
 var SEQ=["the","cat","sat","on","\\o/"], VOCAB=["the","cat","sat","on","\\o/","mat","run","sky"];
+function r4(x){ return Math.round(x*1e4)/1e4; }   // match forward.py: weights/embeds rounded to 4
 function grid(rows,cols,salt){ var M=[]; for(var i=0;i<rows;i++){ var r=[];
-  for(var j=0;j<cols;j++) r.push(Math.sin((i+1)*2.3+(j+1)*1.7+salt*0.9)); M.push(r); } return M; }
+  for(var j=0;j<cols;j++) r.push(r4(Math.sin((i+1)*2.3+(j+1)*1.7+salt*0.9))); M.push(r); } return M; }
 function tokSalt(t){ var s=0; for(var i=0;i<t.length;i++) s+=t.charCodeAt(i); return s%11; }
-function embed(t){ var s=tokSalt(t), v=[]; for(var k=0;k<D;k++) v.push(Math.sin((k+1)*1.3+s*0.7)); return v; }
+function embed(t){ var s=tokSalt(t), v=[]; for(var k=0;k<D;k++) v.push(r4(Math.sin((k+1)*1.3+s*0.7))); return v; }
 function matvec(M,v){ return M.map(function(row){ var s=0; for(var j=0;j<v.length;j++) s+=row[j]*v[j]; return s; }); }
 function add(a,b){ return a.map(function(x,i){ return x+b[i]; }); }
 function dot(a,b){ var s=0; for(var i=0;i<a.length;i++) s+=a[i]*b[i]; return s; }
