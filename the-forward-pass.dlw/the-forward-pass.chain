@@ -4,6 +4,6 @@ slug  : the-forward-pass
 seal  : d68033e5a450dfbb9821921db373d92c9fda3eb6779fb4639b76f63659254668
 prev  : 69740a7f721a16b6e23d835d1d4982410ff372912280dca52ca87090aec1dd65
 link  : 4d3280ceac6e0884b6453c46661335e170c81acde620a43e113bd2cd48b06b20
-head  : 3447d3a0533aaf1e29a8bdc67a9774884fb3ae9dbc8a17064b7a008ca3c4ec90
+head  : 13f9ace173ef2e60af38912ba329b4afcb5a38b84a0e4495e8d30327f8c99cc2
 
 — the tether: link = sha256(index|slug|seal|prev). the chain head commits to the whole corpus.
